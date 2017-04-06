@@ -3,3 +3,4 @@ flavours-of-physics-start
 higgs_data/
 papers/
 proposal/
+*.pyc

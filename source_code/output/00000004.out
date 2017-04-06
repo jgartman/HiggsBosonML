@@ -1,0 +1,26 @@
+Job launching after 0.10 seconds in submission.
+Running python job.
+Changed into dir /home/ec2-user/project/source_code
+Importing project.py
+Running project.main()
+Got result 3293.53007813
+Completed successfully in 5.33 seconds. [{u'main': 3293.5300781250007}]
+{u'learning_rate': array([ 0.00974814])}
+0.00974814349369
+('Epoch:', '0001', 'cost=', '166454.720214844')
+('Epoch:', '0002', 'cost=', '35268.654980469')
+('Epoch:', '0003', 'cost=', '12289.720068359')
+('Epoch:', '0004', 'cost=', '7418.026000977')
+('Epoch:', '0005', 'cost=', '5864.540576172')
+('Epoch:', '0006', 'cost=', '7353.019458008')
+('Epoch:', '0007', 'cost=', '6955.804467773')
+('Epoch:', '0008', 'cost=', '8942.983789063')
+('Epoch:', '0009', 'cost=', '12010.313403320')
+('Epoch:', '0010', 'cost=', '17126.892089844')
+('Epoch:', '0011', 'cost=', '14904.029394531')
+('Epoch:', '0012', 'cost=', '10185.035302734')
+('Epoch:', '0013', 'cost=', '5038.846020508')
+('Epoch:', '0014', 'cost=', '6534.412207031')
+('Epoch:', '0015', 'cost=', '3293.530078125')
+Optimization Finished!
+('Accuracy:', 0.75999999)
