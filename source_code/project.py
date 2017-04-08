@@ -3,23 +3,46 @@ import pandas as pd
 import numpy as np
 
 
-def multilayer_perceptron(x, weights, biases, dropout=False):
-    # Hidden layer with RELU activation
+def mlp(x, weights, biases, n_layers, dropout=False):
     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
     layer_1 = tf.nn.relu(layer_1)
     if dropout: layer_1 = tf.nn.dropout(layer_1, .5)
-    # Hidden layer with RELU activation
-    layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
-    layer_2 = tf.nn.relu(layer_2)
-    if dropout: layer_2 = tf.nn.dropout(layer_2,.5)
-    # Output layer with linear activation
-    out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
-    return out_layer
+    previous_layer = layer_1
+    for i in range(1, n_layers):
+        layer_label = 'h' + str(i + 1)
+        bias_label = 'b' + str(i + 1)
+        layer = tf.add(tf.matmul(previous_layer, weights[layer_label]), biases[bias_label])
+        layer = tf.nn.relu(layer)
+        if dropout: layer = tf.nn.dropout(layer, .5)
+        previous_layer = layer
+    out_layer_label = 'h' + str(n_layers + 1)
+    out_bias_label = 'b' + str(n_layers + 1)
+    out_layer = tf.matmul(previous_layer, weights[out_layer_label]) + biases[out_bias_label]
+    return out_layer     
 
 def get_next_batch_index(n_batch,batch_size):
     lower = n_batch * batch_size
     upper = n_batch * batch_size + batch_size - 1
     return (lower,upper)
+
+def get_weights(n_input,n_output,n_units_per_h_layer):
+
+    units_per_layer = [n_input] + n_units_per_h_layer + [n_output]
+    weights = dict()
+    for i in range(0,len(units_per_layer) - 1):
+        current_layer = 'h' + str(i + 1)
+        weights.update({current_layer:tf.Variable(tf.random_normal([units_per_layer[i], units_per_layer[i+1]]))})
+    return weights
+
+def get_biases(n_input,n_output,n_units_per_h_layer):
+
+    units_per_layer = [n_input] + n_units_per_h_layer + [n_output]
+    biases = dict()
+    for i in range(0,len(units_per_layer) - 1):
+        current_layer = 'b' + str(i + 1)
+        biases.update({current_layer:tf.Variable(tf.random_normal([units_per_layer[i + 1]]))})
+    return biases
+
 
 def main(job_id,params):
     print params
@@ -55,6 +78,7 @@ def main(job_id,params):
     #learning_rate = 0.001
     learning_rate = params['learning_rate'][0]
     print learning_rate
+    #print params['units_per_h_layer']
     training_epochs = 15
     batch_size = 100
     display_step = 1
@@ -62,26 +86,20 @@ def main(job_id,params):
     # Network Parameters
     n_hidden_1 = 256 # 1st layer number of features
     n_hidden_2 = 256 # 2nd layer number of features
-    n_input = 30 # MNIST data input (img shape: 28*28)
-    n_classes = 2 # MNIST total classes (0-9 digits)
+    n_hidden_3 = 256
+    n_input = 30 # data input
+    n_classes = 2 # total classes (signal, background)
 
     # tf Graph input
     x = tf.placeholder("float", [None, n_input])
     y = tf.placeholder("float", [None, n_classes])
 
-    weights = {
-        'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
-        'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-        'out': tf.Variable(tf.random_normal([n_hidden_2, n_classes]))
-    }
-    biases = {
-        'b1': tf.Variable(tf.random_normal([n_hidden_1])),
-        'b2': tf.Variable(tf.random_normal([n_hidden_2])),
-        'out': tf.Variable(tf.random_normal([n_classes]))
-    }   
     # Construct model
-    pred = multilayer_perceptron(x, weights, biases)
+    weights = get_weights(n_input,n_classes,[n_hidden_1,n_hidden_2,n_hidden_3])
+    biases = get_biases(n_input,n_classes,[n_hidden_1,n_hidden_2,n_hidden_3])
 
+    #pred = multilayer_perceptron(x, weights, biases)
+    pred = mlp(x,weights,biases,3)
     # Define loss and optimizer
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
@@ -121,3 +139,6 @@ def main(job_id,params):
         print("Accuracy:", accuracy.eval({x: test_inputs, y: test_labels}))
 
     return float(avg_cost)
+
+params = dict(learning_rate=np.array([.0001]))
+main(0,params)
