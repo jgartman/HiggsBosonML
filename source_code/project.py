@@ -20,11 +20,6 @@ def mlp(x, weights, biases, n_layers, dropout=False):
     out_layer = tf.matmul(previous_layer, weights[out_layer_label]) + biases[out_bias_label]
     return out_layer     
 
-def get_next_batch_index(n_batch,batch_size):
-    lower = n_batch * batch_size
-    upper = n_batch * batch_size + batch_size - 1
-    return (lower,upper)
-
 def get_weights(n_input,n_output,n_units_per_h_layer):
 
     units_per_layer = [n_input] + n_units_per_h_layer + [n_output]
@@ -75,11 +70,14 @@ def main(job_id,params):
     test_labels = pd.get_dummies(rtsd['Label'])
 
     # Parameters
-    #learning_rate = 0.001
-    learning_rate = params['learning_rate'][0]
+    learning_rate =float( params['learning_rate'])
+    n_hidden_layers = int( params['n_hidden_layers'])
+    units_per_layer = int( params['units_per_layer'])
     print learning_rate
-    #print params['units_per_h_layer']
-    training_epochs = 15
+    print n_hidden_layers
+    print units_per_layer
+    
+    training_epochs = 50
     batch_size = 100
     display_step = 1
 
@@ -95,11 +93,11 @@ def main(job_id,params):
     y = tf.placeholder("float", [None, n_classes])
 
     # Construct model
-    weights = get_weights(n_input,n_classes,[n_hidden_1,n_hidden_2,n_hidden_3])
-    biases = get_biases(n_input,n_classes,[n_hidden_1,n_hidden_2,n_hidden_3])
+    weights = get_weights(n_input,n_classes,[units_per_layer]*n_hidden_layers)
+    biases = get_biases(n_input,n_classes,[units_per_layer]*n_hidden_layers)
 
     #pred = multilayer_perceptron(x, weights, biases)
-    pred = mlp(x,weights,biases,3)
+    pred = mlp(x,weights,biases,n_hidden_layers)
     # Define loss and optimizer
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
@@ -117,19 +115,20 @@ def main(job_id,params):
             total_batch = 10
             # Loop over all batches
             for i in range(total_batch):
-                next_batch_index = get_next_batch_index(i,batch_size)
-                lower = next_batch_index[0]
-                upper = next_batch_index[1]
+                index = np.random.choice(np.arange(1000), 100, replace=False)
+                x_batch = train_inputs.ix[index]
+                y_batch = train_labels.ix[index]
 
                 # Run optimization op (backprop) and cost op (to get loss value)
-                _, c = sess.run([optimizer, cost], feed_dict={x: train_inputs[lower:upper],
-                                                              y: train_labels[lower:upper]})
+                _, c = sess.run([optimizer, cost], feed_dict={x: x_batch,
+                                                              y: y_batch})
                 # Compute average loss
                 avg_cost += c / total_batch
             # Display logs per epoch step
             if epoch % display_step == 0:
                 print("Epoch:", '%04d' % (epoch+1), "cost=", \
                     "{:.9f}".format(avg_cost))
+        
         print("Optimization Finished!")
 
         # Test model
@@ -140,5 +139,5 @@ def main(job_id,params):
 
     return float(avg_cost)
 
-params = dict(learning_rate=np.array([.0001]))
+params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([2]), units_per_layer=np.array([100]))
 main(0,params)
