@@ -64,6 +64,32 @@ def main(job_id,params):
     train_inputs = rtd[features]
     test_inputs = rtsd[features]
 
+    undefined_columns = ['DER_mass_MMC','DER_mass_jet_jet','DER_prodeta_jet_jet','PRI_jet_leading_eta',
+        'PRI_jet_leading_phi','PRI_jet_subleading_eta','PRI_jet_subleading_phi']
+    defined_columns = [item for item in features if item not in undefined_columns]
+
+    train_inputs[defined_columns] = (train_inputs[defined_columns] - train_inputs[defined_columns].mean()) / train_inputs[defined_columns].std()
+
+    #first replace -999 with np.nan
+    train_inputs[undefined_columns] = train_inputs[undefined_columns].replace(-999,value=np.nan)
+
+    #standardize
+    train_inputs[undefined_columns] = (train_inputs[undefined_columns] - train_inputs[undefined_columns].mean()) / train_inputs[undefined_columns].std()
+
+    #replace np.nan with -999
+    train_inputs[undefined_columns] = train_inputs[undefined_columns].fillna(-999)
+
+    test_inputs[defined_columns] = (test_inputs[defined_columns] - test_inputs[defined_columns].mean()) / test_inputs[defined_columns].std()
+
+    #first replace -999 with np.nan
+    test_inputs[undefined_columns] = test_inputs[undefined_columns].replace(-999,value=np.nan)
+
+    #standardize
+    test_inputs[undefined_columns] = (test_inputs[undefined_columns] - test_inputs[undefined_columns].mean()) / test_inputs[undefined_columns].std()
+
+    #replace np.nan with -999
+    test_inputs[undefined_columns] = test_inputs[undefined_columns].fillna(-999)
+ 
     weights = rtd['Weight']
 
     train_labels = pd.get_dummies(rtd['Label'])
