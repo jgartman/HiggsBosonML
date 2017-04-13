@@ -46,8 +46,8 @@ def main(job_id,params):
     data = pd.read_csv(data_path)
 
     #reduced testing/training data
-    rtd = data[:1000]
-    rtsd = data[1000:1100]
+    rtd = data[:50000]
+    rtsd = data[50000:51000]
 
     del data
 
@@ -63,7 +63,7 @@ def main(job_id,params):
 
     train_inputs = rtd[features]
     test_inputs = rtsd[features]
-
+    
     undefined_columns = ['DER_mass_MMC','DER_mass_jet_jet','DER_prodeta_jet_jet','PRI_jet_leading_eta',
         'PRI_jet_leading_phi','PRI_jet_subleading_eta','PRI_jet_subleading_phi']
     defined_columns = [item for item in features if item not in undefined_columns]
@@ -89,9 +89,7 @@ def main(job_id,params):
 
     #replace np.nan with -999
     test_inputs[undefined_columns] = test_inputs[undefined_columns].fillna(-999)
- 
-    weights = rtd['Weight']
-
+    
     train_labels = pd.get_dummies(rtd['Label'])
     test_labels = pd.get_dummies(rtsd['Label'])
 
@@ -103,14 +101,11 @@ def main(job_id,params):
     print n_hidden_layers
     print units_per_layer
     
-    training_epochs = 50
+    training_epochs = 200
     batch_size = 100
     display_step = 1
 
     # Network Parameters
-    n_hidden_1 = 256 # 1st layer number of features
-    n_hidden_2 = 256 # 2nd layer number of features
-    n_hidden_3 = 256
     n_input = 30 # data input
     n_classes = 2 # total classes (signal, background)
 
@@ -138,10 +133,10 @@ def main(job_id,params):
         # Training cycle
         for epoch in range(training_epochs):
             avg_cost = 0.
-            total_batch = 10
+            total_batch = 500
             # Loop over all batches
             for i in range(total_batch):
-                index = np.random.choice(np.arange(1000), 100, replace=False)
+                index = np.random.choice(np.arange(50000), 100, replace=False)
                 x_batch = train_inputs.ix[index]
                 y_batch = train_labels.ix[index]
 
@@ -154,16 +149,23 @@ def main(job_id,params):
             if epoch % display_step == 0:
                 print("Epoch:", '%04d' % (epoch+1), "cost=", \
                     "{:.9f}".format(avg_cost))
-        
+
+            correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+            # Calculate accuracy
+            accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+            print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels}))
+            print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels}))
+
         print("Optimization Finished!")
 
         # Test model
         correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
         # Calculate accuracy
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        print("Accuracy:", accuracy.eval({x: test_inputs, y: test_labels}))
+        print("Training Set Accuracy:", accuracy.eval({x: train_inputs, y: train_labels}))
+        print("Test Set Accuracy:", accuracy.eval({x: test_inputs, y: test_labels}))
 
     return float(avg_cost)
 
-params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([2]), units_per_layer=np.array([100]))
+params = dict(learning_rate=np.array([.001]), n_hidden_layers=np.array([5]), units_per_layer=np.array([100]))
 main(0,params)
