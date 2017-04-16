@@ -44,11 +44,11 @@ def main(job_id,params):
     data_path = "../higgs_data/atlas-higgs-challenge-2014-v2.csv"
 
     data = pd.read_csv(data_path)
-
+    data['DER_mass_MMC'] = data['DER_mass_MMC'].replace(-999,data['DER_mass_MMC'].median())
+    
     #reduced testing/training data
-    rtd = data[:50000]
-    rtsd = data[50000:51000]
-
+    rtd = data[:100000]
+    rtsd = data[300000:350000]
     del data
 
     features = ['DER_mass_MMC', 'DER_mass_transverse_met_lep',
@@ -64,10 +64,11 @@ def main(job_id,params):
     train_inputs = rtd[features]
     test_inputs = rtsd[features]
     
-    undefined_columns = ['DER_mass_MMC','DER_mass_jet_jet','DER_prodeta_jet_jet','PRI_jet_leading_eta',
-        'PRI_jet_leading_phi','PRI_jet_subleading_eta','PRI_jet_subleading_phi']
+    undefined_columns = ['DER_mass_jet_jet','DER_prodeta_jet_jet','PRI_jet_leading_eta',
+        'PRI_jet_leading_phi','PRI_jet_subleading_eta','PRI_jet_subleading_phi','DER_deltaeta_jet_jet',
+        'PRI_jet_subleading_pt']
     defined_columns = [item for item in features if item not in undefined_columns]
-
+    """
     train_inputs[defined_columns] = (train_inputs[defined_columns] - train_inputs[defined_columns].mean()) / train_inputs[defined_columns].std()
 
     #first replace -999 with np.nan
@@ -89,7 +90,12 @@ def main(job_id,params):
 
     #replace np.nan with -999
     test_inputs[undefined_columns] = test_inputs[undefined_columns].fillna(-999)
-    
+    """
+    train_inputs = rtd[defined_columns]
+    test_inputs = rtsd[defined_columns]
+
+    train_inputs = (train_inputs - train_inputs.mean())/train_inputs.std()
+    test_inputs = (test_inputs - test_inputs.mean())/test_inputs.std()
     train_labels = pd.get_dummies(rtd['Label'])
     test_labels = pd.get_dummies(rtsd['Label'])
 
@@ -101,12 +107,12 @@ def main(job_id,params):
     print n_hidden_layers
     print units_per_layer
     
-    training_epochs = 200
+    training_epochs = 20000
     batch_size = 100
     display_step = 1
 
     # Network Parameters
-    n_input = 30 # data input
+    n_input = 22 # data input
     n_classes = 2 # total classes (signal, background)
 
     # tf Graph input
@@ -118,8 +124,9 @@ def main(job_id,params):
     biases = get_biases(n_input,n_classes,[units_per_layer]*n_hidden_layers)
 
     #pred = multilayer_perceptron(x, weights, biases)
-    pred = mlp(x,weights,biases,n_hidden_layers)
+    pred = mlp(x,weights,biases,n_hidden_layers,dropout=True)
     # Define loss and optimizer
+    softmax = tf.nn.softmax(pred)
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
@@ -133,10 +140,10 @@ def main(job_id,params):
         # Training cycle
         for epoch in range(training_epochs):
             avg_cost = 0.
-            total_batch = 500
+            total_batch = 1000
             # Loop over all batches
             for i in range(total_batch):
-                index = np.random.choice(np.arange(50000), 100, replace=False)
+                index = np.random.choice(np.arange(100000), 100, replace=False)
                 x_batch = train_inputs.ix[index]
                 y_batch = train_labels.ix[index]
 
@@ -152,20 +159,20 @@ def main(job_id,params):
 
             correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
             # Calculate accuracy
+            if epoch % 5 == 0:
+                print softmax.eval({x : train_inputs})
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+            test_cost = sess.run(cost, feed_dict={x: test_inputs,
+                                                  y: test_labels})
+            print("Epoch:", '%04d' % (epoch+1), "test cost=", \
+                    "{:.9f}".format(test_cost))
+
             print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels}))
             print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels}))
 
         print("Optimization Finished!")
 
-        # Test model
-        correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-        # Calculate accuracy
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        print("Training Set Accuracy:", accuracy.eval({x: train_inputs, y: train_labels}))
-        print("Test Set Accuracy:", accuracy.eval({x: test_inputs, y: test_labels}))
+    return float(test_cost)
 
-    return float(avg_cost)
-
-params = dict(learning_rate=np.array([.001]), n_hidden_layers=np.array([5]), units_per_layer=np.array([100]))
+params = dict(learning_rate=np.array([.001]), n_hidden_layers=np.array([4]), units_per_layer=np.array([500]))
 main(0,params)
