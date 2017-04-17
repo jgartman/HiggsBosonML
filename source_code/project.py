@@ -39,16 +39,27 @@ def get_biases(n_input,n_output,n_units_per_h_layer):
     return biases
 
 
-def main(job_id,params):
+def main(job_id,params,hypers_opt=True):
     print params
     data_path = "../higgs_data/atlas-higgs-challenge-2014-v2.csv"
 
     data = pd.read_csv(data_path)
     data['DER_mass_MMC'] = data['DER_mass_MMC'].replace(-999,data['DER_mass_MMC'].median())
     
-    #reduced testing/training data
-    rtd = data[:100000]
-    rtsd = data[300000:350000]
+    """
+    if doing hyperparamter optimization validation training set is 0:100000 and validation
+    test set is 100000:120000
+    """
+    if hypers_opt:
+        training_data = data[:100000]
+        testing_data = data[100000:120000]
+        training_set_size = 100000
+    else:
+        training_data = data[120000:720000]
+        training_data.index = range(600000)
+        testing_data = data[720000:]
+        training_set_size = 600000
+
     del data
 
     features = ['DER_mass_MMC', 'DER_mass_transverse_met_lep',
@@ -61,8 +72,6 @@ def main(job_id,params):
                 'PRI_jet_leading_eta', 'PRI_jet_leading_phi', 'PRI_jet_subleading_pt',
                 'PRI_jet_subleading_eta', 'PRI_jet_subleading_phi', 'PRI_jet_all_pt']
 
-    train_inputs = rtd[features]
-    test_inputs = rtsd[features]
     
     undefined_columns = ['DER_mass_jet_jet','DER_prodeta_jet_jet','PRI_jet_leading_eta',
         'PRI_jet_leading_phi','PRI_jet_subleading_eta','PRI_jet_subleading_phi','DER_deltaeta_jet_jet',
@@ -91,23 +100,20 @@ def main(job_id,params):
     #replace np.nan with -999
     test_inputs[undefined_columns] = test_inputs[undefined_columns].fillna(-999)
     """
-    train_inputs = rtd[defined_columns]
-    test_inputs = rtsd[defined_columns]
+    train_inputs = training_data[defined_columns]
+    test_inputs = testing_data[defined_columns]
 
     train_inputs = (train_inputs - train_inputs.mean())/train_inputs.std()
     test_inputs = (test_inputs - test_inputs.mean())/test_inputs.std()
-    train_labels = pd.get_dummies(rtd['Label'])
-    test_labels = pd.get_dummies(rtsd['Label'])
+    train_labels = pd.get_dummies(training_data['Label'])
+    test_labels = pd.get_dummies(testing_data['Label'])
 
     # Parameters
     learning_rate =float( params['learning_rate'])
-    n_hidden_layers = int( params['n_hidden_layers'])
+    n_hidden_layers = int( params['n_hidden_layers'][0])
     units_per_layer = int( params['units_per_layer'])
-    print learning_rate
-    print n_hidden_layers
-    print units_per_layer
     
-    training_epochs = 20000
+    training_epochs = 10
     batch_size = 100
     display_step = 1
 
@@ -140,10 +146,10 @@ def main(job_id,params):
         # Training cycle
         for epoch in range(training_epochs):
             avg_cost = 0.
-            total_batch = 1000
+            total_batch = training_set_size / batch_size
             # Loop over all batches
             for i in range(total_batch):
-                index = np.random.choice(np.arange(100000), 100, replace=False)
+                index = np.random.choice(np.arange(training_set_size), batch_size, replace=False)
                 x_batch = train_inputs.ix[index]
                 y_batch = train_labels.ix[index]
 
@@ -154,25 +160,27 @@ def main(job_id,params):
                 avg_cost += c / total_batch
             # Display logs per epoch step
             if epoch % display_step == 0:
-                print("Epoch:", '%04d' % (epoch+1), "cost=", \
+                print("Epoch:", '%04d' % (epoch+1), "training cost=", \
                     "{:.9f}".format(avg_cost))
 
             correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
             # Calculate accuracy
-            if epoch % 5 == 0:
-                print softmax.eval({x : train_inputs})
+            #if epoch % 5 == 0:
+ 
+                #print weights['h1'].eval()
+                # print softmax.eval({x : train_inputs})
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
             test_cost = sess.run(cost, feed_dict={x: test_inputs,
                                                   y: test_labels})
             print("Epoch:", '%04d' % (epoch+1), "test cost=", \
                     "{:.9f}".format(test_cost))
-
-            print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels}))
-            print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels}))
+            if not hypers_opt:
+                print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels}))
+                print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels}))
 
         print("Optimization Finished!")
 
     return float(test_cost)
 
-params = dict(learning_rate=np.array([.001]), n_hidden_layers=np.array([4]), units_per_layer=np.array([500]))
-main(0,params)
+#params = dict(learning_rate=np.array([.001]), n_hidden_layers=np.array([2]), units_per_layer=np.array([50]))
+#main(0,params,hypers_opt=False)

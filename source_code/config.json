@@ -2,20 +2,19 @@
     "language"        : "PYTHON",
     "main-file"       : "project.py",
     "experiment-name" : "dnn-hyperparams",
-    "likelihood"      : "GAUSSIAN",
-    "max_finished_jobs" : 10,
+    "likelihood" : "GAUSSIAN",
     "variables" : {
         "learning_rate" : {
             "type" : "FLOAT",
             "size" : 1,
-            "min"  : 0.00001,
+            "min"  : 0.0001,
             "max"  : 0.1
         },
 	"units_per_layer" : {
 	    "type" : "INT",
             "size" : 1,
-	    "min" : 100,
-            "max" : 500
+            "min" : 50,
+	    "max" : 500
 	},
 	"n_hidden_layers" : {
 	    "type" : "INT",
