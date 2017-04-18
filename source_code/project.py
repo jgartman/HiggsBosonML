@@ -3,17 +3,17 @@ import pandas as pd
 import numpy as np
 
 
-def mlp(x, weights, biases, n_layers, dropout=False):
+def mlp(x, weights, biases, n_layers, p_dropout=.5):
     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
     layer_1 = tf.nn.relu(layer_1)
-    if dropout: layer_1 = tf.nn.dropout(layer_1, .5)
+    layer_1 = tf.nn.dropout(layer_1, p_dropout)
     previous_layer = layer_1
     for i in range(1, n_layers):
         layer_label = 'h' + str(i + 1)
         bias_label = 'b' + str(i + 1)
         layer = tf.add(tf.matmul(previous_layer, weights[layer_label]), biases[bias_label])
         layer = tf.nn.relu(layer)
-        if dropout: layer = tf.nn.dropout(layer, .5)
+        layer = tf.nn.dropout(layer, p_dropout)
         previous_layer = layer
     out_layer_label = 'h' + str(n_layers + 1)
     out_bias_label = 'b' + str(n_layers + 1)
@@ -26,7 +26,7 @@ def get_weights(n_input,n_output,n_units_per_h_layer):
     weights = dict()
     for i in range(0,len(units_per_layer) - 1):
         current_layer = 'h' + str(i + 1)
-        weights.update({current_layer:tf.Variable(tf.random_normal([units_per_layer[i], units_per_layer[i+1]]))})
+        weights.update({current_layer:tf.Variable(tf.random_uniform([units_per_layer[i], units_per_layer[i+1]],minval=-1,maxval=1))})
     return weights
 
 def get_biases(n_input,n_output,n_units_per_h_layer):
@@ -35,7 +35,7 @@ def get_biases(n_input,n_output,n_units_per_h_layer):
     biases = dict()
     for i in range(0,len(units_per_layer) - 1):
         current_layer = 'b' + str(i + 1)
-        biases.update({current_layer:tf.Variable(tf.random_normal([units_per_layer[i + 1]]))})
+        biases.update({current_layer:tf.Variable(tf.random_uniform([units_per_layer[i + 1]],minval=-1,maxval=1))})
     return biases
 
 
@@ -124,13 +124,14 @@ def main(job_id,params,hypers_opt=True):
     # tf Graph input
     x = tf.placeholder("float", [None, n_input])
     y = tf.placeholder("float", [None, n_classes])
+    p_dropout = tf.placeholder("float", None)
 
     # Construct model
     weights = get_weights(n_input,n_classes,[units_per_layer]*n_hidden_layers)
     biases = get_biases(n_input,n_classes,[units_per_layer]*n_hidden_layers)
 
     #pred = multilayer_perceptron(x, weights, biases)
-    pred = mlp(x,weights,biases,n_hidden_layers,dropout=True)
+    pred = mlp(x,weights,biases,n_hidden_layers,p_dropout=p_dropout)
     # Define loss and optimizer
     softmax = tf.nn.softmax(pred)
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
@@ -155,7 +156,8 @@ def main(job_id,params,hypers_opt=True):
 
                 # Run optimization op (backprop) and cost op (to get loss value)
                 _, c = sess.run([optimizer, cost], feed_dict={x: x_batch,
-                                                              y: y_batch})
+                                                              y: y_batch,
+                                                              p_dropout:.5})
                 # Compute average loss
                 avg_cost += c / total_batch
             # Display logs per epoch step
@@ -171,7 +173,8 @@ def main(job_id,params,hypers_opt=True):
                 # print softmax.eval({x : train_inputs})
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
             test_cost = sess.run(cost, feed_dict={x: test_inputs,
-                                                  y: test_labels})
+                                                  y: test_labels,
+                                                  p_dropout: 1.0})
             print("Epoch:", '%04d' % (epoch+1), "test cost=", \
                     "{:.9f}".format(test_cost))
             if not hypers_opt:
@@ -182,5 +185,5 @@ def main(job_id,params,hypers_opt=True):
 
     return float(test_cost)
 
-#params = dict(learning_rate=np.array([.001]), n_hidden_layers=np.array([2]), units_per_layer=np.array([50]))
-#main(0,params,hypers_opt=False)
+#params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]))
+#main(0,params)
