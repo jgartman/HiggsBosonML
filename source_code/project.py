@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 
-def mlp(x, weights, biases, n_layers, p_dropout=.5):
+def mlp(x, weights, biases, n_layers, p_dropout=1.0):
     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
     layer_1 = tf.nn.relu(layer_1)
     layer_1 = tf.nn.dropout(layer_1, p_dropout)
@@ -178,12 +178,12 @@ def main(job_id,params,hypers_opt=True):
             print("Epoch:", '%04d' % (epoch+1), "test cost=", \
                     "{:.9f}".format(test_cost))
             if not hypers_opt:
-                print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels}))
-                print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels}))
+                print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels,p_dropout:.5}))
+                print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0}))
 
         print("Optimization Finished!")
 
     return float(test_cost)
 
 #params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]))
-#main(0,params)
+#main(0,params,hypers_opt =False)
