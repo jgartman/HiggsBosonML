@@ -4,3 +4,9 @@ higgs_data/
 papers/
 proposal/
 *.pyc
+*.aux
+*.bbl
+*.blg
+*.log
+*.gz
+

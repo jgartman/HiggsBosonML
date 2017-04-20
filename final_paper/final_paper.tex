@@ -21,7 +21,7 @@
 
 % Pages are numbered in submission mode, and unnumbered in camera-ready
 %\ifcvprfinal\pagestyle{empty}\fi
-\setcounter{page}{4321}
+\setcounter{page}{1}
 \begin{document}
 
 %%%%%%%%% TITLE
@@ -54,10 +54,15 @@ Boston, MA\\
 
 %%%%%%%%% BODY TEXT
 \section{Introduction}
-Recent years have seen a dramatic increase in popularity of deep neural networks.  These networks have shown improved performance over existing methods in diverse areas such as computer vision, speech recognition, and text analysis.  The use of shallow neural networks has been common practice in high energy physics since the 1980's.  Typical applications of these networks are in classifying the subatomic particles resulting from collisions in particle accelerators based on their decay topologies. 
-\subsection{Language}
+Recent years have seen a dramatic increase in the popularity of deep neural networks.  These networks have shown improved performance over existing methods in diverse areas such as computer vision, speech recognition, and text analysis.  Multiple hidden layers and non-linear activations allow deep networks the flexibility to model complex functions more efficiently and with better generalization that their shallow counterparts.  The use of shallow neural networks has been common practice in high energy physics since the 1980's.  An important application of these networks is in classifying the subatomic particles produced by collisions at particle accelerators.
 
-All manuscripts must be in English.
+At particle accelerators like the Large Hadron Collider outside Geneva Switzerland protons are accelerated to nearly the speed of light by powerful magnets and then smashed together with resulting collisions observed by a series of detectors.  At high enough energies rare and sometimes unstable particles can be produced.  The data from these collisions including the speed and trajectories of the resulting particles can then be input to machine learning algorithms to classify the particles themselves.  The important benefits of improved machine learning algorithms are two-fold.  Firstly, better classification accuracy can improve the chances of correctly classifying a potentially rare or undiscovered particle.  Secondly, improved algorithms can learn on smaller training sets.  Although training data is often the result of computer simulation it can be computationally expensive to produce so there is much value in using smaller datasets.  The goal of this paper is to apply regularized deep learning to datasets of limited size while maintaining or improving classification accuracy when compared to shallow networks.
+
+An recent example of the use of machine learning in high energy physics is in the search for decays of the Higgs Boson directly into Fermions at the LHC.  Evidence consistent with the decay of the Higgs into fermionic Tau leptons has been seen in data collected at the LHC but current methods lack the statistical power to cross the standard threshhold for claims of discovery in high energy physics.
+
+\subsection{Related Work}
+
+Shallow networks have been used for decades in particle classification problems but only recently has the use of deep networks been explored.  Baldi et. al. \cite{Baldi:2014kfa}\cite{Baldi:2014pta} apply deep learning to several high energy physics classification tasks.  First in \cite{Baldi:2014kfa}, the authors investigate the performance of deep classifiers in detecting the production of the Higgs boson as well as in the production of super-symmetric charged particles that decay to W bosons.  They observed that deep networks utilizing low level data and high level derived features give improved performance over shallow networks trained with the same features.  In the Higgs production task the classifiers performance was not improved by the inclusion of the high level features indicating that the network was able to learn a representation of these features simply from the low level raw input data.  However, in the super-symmetry task the inclusion of high level features led to improved performance making it difficult to generalize whether all datasets allow for this type of learning.  Both datasets were of similar size containing about 10 millions training examples with about 30 features for each example.  In \cite{Baldi:2014pta} the authors focus on the task mentioned earlier of searching for the decay of the Higgs into two tau leptons.  They compare the performance of deep and shallow networks in detecting the decay using combinations of both high and low level features.  Results indicate that deep networks outperform shallow networks on all tasks even in the case where the shallow network was trained with the full feature set and the deep network was only given the low level features.
 
 \subsection{Dual submission}
 
@@ -166,7 +171,7 @@ If you are making a submission to another conference at the same time,
 which covers similar or overlapping material, you may need to refer to that
 submission in order to explain the differences, just as you would if you
 had previously published related work.  In such cases, include the
-anonymized parallel submission~\cite{Authors14} as additional material and
+anonymized parallel submission~ as additional material and
 cite it as
 \begin{quote}
 [1] Authors. ``The frobnicatable foo filter'', F\&G 2014 Submission ID 324,
@@ -178,7 +183,7 @@ found elsewhere, and refer them to a technical report.  For conference
 submissions, the paper must stand on its own, and not {\em require} the
 reviewer to go to a techreport for further details.  Thus, you may say in
 the body of the paper ``further details may be found
-in~\cite{Authors14b}''.  Then submit the techreport as additional material.
+in''.  Then submit the techreport as additional material.
 Again, you may not assume the reviewers will read this material. 
 
 Sometimes your paper is about a problem which you tested using a tool which
@@ -259,8 +264,8 @@ because reference~\cite{Alpher03} has just two authors.  If you use the
 when used at the end of a sentence as in Alpher \etal.
 
 For this citation style, keep multiple citations in numerical (not
-chronological) order, so prefer \cite{Alpher03,Alpher02,Authors14} to
-\cite{Alpher02,Alpher03,Authors14}.
+chronological) order, so prefer \cite{Alpher03,Alpher02} to
+\cite{Alpher02,Alpher03}.
 
 
 \begin{figure*}
@@ -370,7 +375,7 @@ which it is referenced. Use Times 8-point type, single-spaced.
 List and number all bibliographical references in 9-point Times,
 single-spaced, at the end of your paper. When referenced in the text,
 enclose the citation number in square brackets, for
-example~\cite{Authors14}.  Where appropriate, include the name(s) of
+example.  Where appropriate, include the name(s) of
 editors of referenced books.
 
 \begin{table}
