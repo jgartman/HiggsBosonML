@@ -1,6 +1,9 @@
 import tensorflow as tf
 import pandas as pd
 import numpy as np
+import pickle
+import datetime
+import os
 
 high_level_features = [
  'DER_mass_MMC',
@@ -128,10 +131,10 @@ def test_model(params,features,chkpt_file=None):
                                                   p_dropout: 1.0})
         print("Test Set Accuracy : ", accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0}))
         
-params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
-test_model(params, high_level_features + low_level_features)
+#params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
+#test_model(params, high_level_features + low_level_features)
 
-def train_model(params, features, chktpt_file_name):
+def train_model(params, features, chkpt_file_name):
     print params
     data_path = "../higgs_data/atlas-higgs-challenge-2014-v2.csv"
 
@@ -158,8 +161,11 @@ def train_model(params, features, chktpt_file_name):
     n_hidden_layers = int( params['n_hidden_layers'])
     units_per_layer = int( params['units_per_layer'])
     beta = int( params['beta'])
-   
- 
+    
+    now = str(datetime.datetime.now()).replace(' ','-').replace(':', '-').replace('.','-')
+    data_save_path = './output/' + now
+    os.mkdir(data_save_path)
+
     training_epochs = 10
     batch_size = 100
     display_step = 1
@@ -169,9 +175,9 @@ def train_model(params, features, chktpt_file_name):
     n_classes = 2 # total classes (signal, background)
 
     # tf Graph input
-    x = tf.placeholder("float", [None, n_input])
-    y = tf.placeholder("float", [None, n_classes])
-    p_dropout = tf.placeholder("float", None)
+    x = tf.placeholder('float', [None, n_input])
+    y = tf.placeholder('float', [None, n_classes])
+    p_dropout = tf.placeholder('float', None)
 
     # Construct model
     weights = get_weights(n_input,n_classes,[units_per_layer]*n_hidden_layers)
@@ -192,7 +198,10 @@ def train_model(params, features, chktpt_file_name):
     # Launch the graph
     with tf.Session() as sess:
         sess.run(init)
-
+        train_set_cost = []
+        test_set_cost = []
+        train_set_accuracy = []
+        test_set_accuracy = []
         # Training cycle
         for epoch in range(training_epochs):
             avg_cost = 0.
@@ -222,12 +231,27 @@ def train_model(params, features, chktpt_file_name):
                                                   p_dropout: 1.0})
             print("Epoch:", '%04d' % (epoch+1), "test cost=", \
                     "{:.9f}".format(test_cost))
-            print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels,p_dropout:.5}))
-            print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0}))
-        
-        save_path = saver.save(sess, "./tmp/" + chckpt_file_name)
-        print("Optimization Finished! : model saved at %s" % save_path)
+            train_accuracy = accuracy.eval({x: train_inputs, y: train_labels,p_dropout:.5})
+            test_accuracy = accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0})
+
+            train_set_cost.append(avg_cost)
+            test_set_cost.append(test_cost)
+            train_set_accuracy.append(train_accuracy)
+            test_set_accuracy.append(test_accuracy)
+
+            print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", train_accuracy)
+            print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", test_accuracy)
+         
+        model_save_path = saver.save(sess, './tmp/' + chkpt_file_name)
+
+        pickle.dump(params, open(data_save_path + '/params.p','wb'))
+        pickle.dump(train_set_accuracy, open(data_save_path + '/train_accuracy.p','wb'))
+        pickle.dump(test_set_accuracy, open(data_save_path + '/test_accuracy.p','wb'))
+        pickle.dump(train_set_cost, open(data_save_path + '/train_cost.p','wb'))
+        pickle.dump(test_cost, open(data_save_path + '/test_cost.p','wb'))
+
+        print('Optimization Finished! : model saved at %s' % model_save_path)
 
 
-#params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
-#train_model(params, high_level_features + low_level_features)
+params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
+train_model(params, high_level_features + low_level_features, 'test.ckpt')
