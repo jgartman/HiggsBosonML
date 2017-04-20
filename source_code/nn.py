@@ -2,6 +2,35 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 
+high_level_features = [
+ 'DER_mass_MMC',
+ 'DER_mass_transverse_met_lep',
+ 'DER_mass_vis',
+ 'DER_pt_h',
+ 'DER_deltar_tau_lep',
+ 'DER_pt_tot',
+ 'DER_sum_pt',
+ 'DER_pt_ratio_lep_tau',
+ 'DER_met_phi_centrality',
+ 'DER_lep_eta_centrality']
+
+low_level_features = [
+ 'PRI_tau_pt',
+ 'PRI_tau_eta',
+ 'PRI_tau_phi',
+ 'PRI_lep_pt',
+ 'PRI_lep_eta',
+ 'PRI_lep_phi',
+ 'PRI_met',
+ 'PRI_met_phi',
+ 'PRI_met_sumet',
+ 'PRI_jet_num',
+ 'PRI_jet_leading_pt',
+ 'PRI_jet_all_pt']
+
+features = {"HIGH_LEVEL" : high_level_features,
+            "LOW_LEVEL" : low_level_features,
+            "COMBO" : high_level_features + low_level_features}
 
 def mlp(x, weights, biases, n_layers, p_dropout=1.0):
     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
@@ -44,7 +73,7 @@ def get_biases(n_input,n_output,n_units_per_h_layer):
         biases.update({current_layer:tf.Variable(tf.random_uniform([units_per_layer[i + 1]],minval=-1,maxval=1))})
     return biases
 
-def test_model(job_id,params):
+def test_model(params,features,chkpt_file=None):
     print params
     data_path = "../higgs_data/atlas-higgs-challenge-2014-v2.csv"
 
@@ -55,57 +84,17 @@ def test_model(job_id,params):
 
     del data
 
-    features = ['DER_mass_MMC', 'DER_mass_transverse_met_lep',
-                'DER_mass_vis', 'DER_pt_h', 'DER_deltaeta_jet_jet', 'DER_mass_jet_jet',
-                'DER_prodeta_jet_jet', 'DER_deltar_tau_lep', 'DER_pt_tot', 'DER_sum_pt',
-                'DER_pt_ratio_lep_tau', 'DER_met_phi_centrality',
-                'DER_lep_eta_centrality', 'PRI_tau_pt', 'PRI_tau_eta', 'PRI_tau_phi',
-                'PRI_lep_pt', 'PRI_lep_eta', 'PRI_lep_phi', 'PRI_met', 'PRI_met_phi',
-                'PRI_met_sumet', 'PRI_jet_num', 'PRI_jet_leading_pt',
-                'PRI_jet_leading_eta', 'PRI_jet_leading_phi', 'PRI_jet_subleading_pt',
-                'PRI_jet_subleading_eta', 'PRI_jet_subleading_phi', 'PRI_jet_all_pt']
-
-    
-    undefined_columns = ['DER_mass_jet_jet','DER_prodeta_jet_jet','PRI_jet_leading_eta',
-        'PRI_jet_leading_phi','PRI_jet_subleading_eta','PRI_jet_subleading_phi','DER_deltaeta_jet_jet',
-        'PRI_jet_subleading_pt']
-    defined_columns = [item for item in features if item not in undefined_columns]
-    """
-    train_inputs[defined_columns] = (train_inputs[defined_columns] - train_inputs[defined_columns].mean()) / train_inputs[defined_columns].std()
-
-    #first replace -999 with np.nan
-    train_inputs[undefined_columns] = train_inputs[undefined_columns].replace(-999,value=np.nan)
-
-    #standardize
-    train_inputs[undefined_columns] = (train_inputs[undefined_columns] - train_inputs[undefined_columns].mean()) / train_inputs[undefined_columns].std()
-
-    #replace np.nan with -999
-    train_inputs[undefined_columns] = train_inputs[undefined_columns].fillna(-999)
-
-    test_inputs[defined_columns] = (test_inputs[defined_columns] - test_inputs[defined_columns].mean()) / test_inputs[defined_columns].std()
-
-    #first replace -999 with np.nan
-    test_inputs[undefined_columns] = test_inputs[undefined_columns].replace(-999,value=np.nan)
-
-    #standardize
-    test_inputs[undefined_columns] = (test_inputs[undefined_columns] - test_inputs[undefined_columns].mean()) / test_inputs[undefined_columns].std()
-
-    #replace np.nan with -999
-    test_inputs[undefined_columns] = test_inputs[undefined_columns].fillna(-999)
-    """
-    test_inputs = testing_data[defined_columns]
+    test_inputs = testing_data[features]
 
     test_inputs = (test_inputs - test_inputs.mean())/test_inputs.std()
     test_labels = pd.get_dummies(testing_data['Label'])
 
     # Parameters
-    learning_rate =float( params['learning_rate'])
     n_hidden_layers = int( params['n_hidden_layers'])
     units_per_layer = int( params['units_per_layer'])
-    beta = int( params['beta'])
    
     # Network Parameters
-    n_input = 22 # data input
+    n_input = len(features) # data input
     n_classes = 2 # total classes (signal, background)
 
     # tf Graph input
@@ -116,6 +105,7 @@ def test_model(job_id,params):
     # Construct model
     weights = get_weights(n_input,n_classes,[units_per_layer]*n_hidden_layers)
     biases = get_biases(n_input,n_classes,[units_per_layer]*n_hidden_layers)
+    vars_dict = weights.copy().update(biases)
 
     #pred = multilayer_perceptron(x, weights, biases)
     pred = mlp(x,weights,biases,n_hidden_layers,p_dropout=p_dropout)
@@ -123,29 +113,25 @@ def test_model(job_id,params):
 
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
     # Initializing the variables
-    init = tf.initialize_all_variables()
     saver = tf.train.Saver(vars_dict)
 
     # Launch the graph
     with tf.Session() as sess:
-        sess.run(init)
-
+        saver.restore(sess, "/tmp/model.ckpt")
+        print weights['h1'].eval()
         # Training cycle
         correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
         # Calculate accuracy
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        test_cost = sess.run(t_cost, feed_dict={x: test_inputs,
+        test_cost = sess.run(cost, feed_dict={x: test_inputs,
                                                   y: test_labels,
                                                   p_dropout: 1.0})
-        print("Epoch:", '%04d' % (epoch+1), "test cost=", \
-                    "{:.9f}".format(test_cost))
-        print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels,p_dropout:.5}))
-        print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0}))
+        print("Test Set Accuracy : ", accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0}))
         
+params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
+test_model(params, high_level_features + low_level_features)
 
-
-
-def train_model(job_id,params):
+def train_model(params, features, chktpt_file_name):
     print params
     data_path = "../higgs_data/atlas-higgs-challenge-2014-v2.csv"
 
@@ -159,46 +145,8 @@ def train_model(job_id,params):
 
     del data
 
-    features = ['DER_mass_MMC', 'DER_mass_transverse_met_lep',
-                'DER_mass_vis', 'DER_pt_h', 'DER_deltaeta_jet_jet', 'DER_mass_jet_jet',
-                'DER_prodeta_jet_jet', 'DER_deltar_tau_lep', 'DER_pt_tot', 'DER_sum_pt',
-                'DER_pt_ratio_lep_tau', 'DER_met_phi_centrality',
-                'DER_lep_eta_centrality', 'PRI_tau_pt', 'PRI_tau_eta', 'PRI_tau_phi',
-                'PRI_lep_pt', 'PRI_lep_eta', 'PRI_lep_phi', 'PRI_met', 'PRI_met_phi',
-                'PRI_met_sumet', 'PRI_jet_num', 'PRI_jet_leading_pt',
-                'PRI_jet_leading_eta', 'PRI_jet_leading_phi', 'PRI_jet_subleading_pt',
-                'PRI_jet_subleading_eta', 'PRI_jet_subleading_phi', 'PRI_jet_all_pt']
-
-    
-    undefined_columns = ['DER_mass_jet_jet','DER_prodeta_jet_jet','PRI_jet_leading_eta',
-        'PRI_jet_leading_phi','PRI_jet_subleading_eta','PRI_jet_subleading_phi','DER_deltaeta_jet_jet',
-        'PRI_jet_subleading_pt']
-    defined_columns = [item for item in features if item not in undefined_columns]
-    """
-    train_inputs[defined_columns] = (train_inputs[defined_columns] - train_inputs[defined_columns].mean()) / train_inputs[defined_columns].std()
-
-    #first replace -999 with np.nan
-    train_inputs[undefined_columns] = train_inputs[undefined_columns].replace(-999,value=np.nan)
-
-    #standardize
-    train_inputs[undefined_columns] = (train_inputs[undefined_columns] - train_inputs[undefined_columns].mean()) / train_inputs[undefined_columns].std()
-
-    #replace np.nan with -999
-    train_inputs[undefined_columns] = train_inputs[undefined_columns].fillna(-999)
-
-    test_inputs[defined_columns] = (test_inputs[defined_columns] - test_inputs[defined_columns].mean()) / test_inputs[defined_columns].std()
-
-    #first replace -999 with np.nan
-    test_inputs[undefined_columns] = test_inputs[undefined_columns].replace(-999,value=np.nan)
-
-    #standardize
-    test_inputs[undefined_columns] = (test_inputs[undefined_columns] - test_inputs[undefined_columns].mean()) / test_inputs[undefined_columns].std()
-
-    #replace np.nan with -999
-    test_inputs[undefined_columns] = test_inputs[undefined_columns].fillna(-999)
-    """
-    train_inputs = training_data[defined_columns]
-    test_inputs = testing_data[defined_columns]
+    train_inputs = training_data[features]
+    test_inputs = testing_data[features]
 
     train_inputs = (train_inputs - train_inputs.mean())/train_inputs.std()
     test_inputs = (test_inputs - test_inputs.mean())/test_inputs.std()
@@ -217,7 +165,7 @@ def train_model(job_id,params):
     display_step = 1
 
     # Network Parameters
-    n_input = 22 # data input
+    n_input = len(features) # data input
     n_classes = 2 # total classes (signal, background)
 
     # tf Graph input
@@ -277,9 +225,9 @@ def train_model(job_id,params):
             print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: train_inputs, y: train_labels,p_dropout:.5}))
             print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0}))
         
-        save_path = saver.save(sess, "./tmp/model.ckpt")
+        save_path = saver.save(sess, "./tmp/" + chckpt_file_name)
         print("Optimization Finished! : model saved at %s" % save_path)
 
 
-params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
-train_model(0,params)
+#params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
+#train_model(params, high_level_features + low_level_features)
