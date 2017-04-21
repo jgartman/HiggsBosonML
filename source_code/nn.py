@@ -183,8 +183,10 @@ def train_model(params, features, chkpt_file_name):
     weights = get_weights(n_input,n_classes,[units_per_layer]*n_hidden_layers)
     biases = get_biases(n_input,n_classes,[units_per_layer]*n_hidden_layers)
 
-    #pred = multilayer_perceptron(x, weights, biases)
     pred = mlp(x,weights,biases,n_hidden_layers,p_dropout=p_dropout)
+    probs = tf.nn.softmax(pred)
+    
+    auc = tf.metrics.auc(y,probs)
     # Define loss and optimizer
     regularizer = get_regularizer(weights)
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y) + beta * regularizer)
@@ -198,6 +200,7 @@ def train_model(params, features, chkpt_file_name):
     # Launch the graph
     with tf.Session() as sess:
         sess.run(init)
+        sess.run(tf.initialize_local_variables())
         train_set_cost = []
         test_set_cost = []
         train_set_accuracy = []
@@ -224,6 +227,7 @@ def train_model(params, features, chkpt_file_name):
                     "{:.9f}".format(avg_cost))
 
             correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+
             # Calculate accuracy
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
             test_cost = sess.run(t_cost, feed_dict={x: test_inputs,
@@ -233,6 +237,9 @@ def train_model(params, features, chkpt_file_name):
                     "{:.9f}".format(test_cost))
             train_accuracy = accuracy.eval({x: train_inputs, y: train_labels,p_dropout:.5})
             test_accuracy = accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0})
+            
+            _auc = sess.run(auc, feed_dict={x : test_inputs, y:test_labels, p_dropout:1.0})
+            print _auc
 
             train_set_cost.append(avg_cost)
             test_set_cost.append(test_cost)
