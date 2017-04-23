@@ -31,9 +31,6 @@ low_level_features = [
  'PRI_jet_leading_pt',
  'PRI_jet_all_pt']
 
-features = {"HIGH_LEVEL" : high_level_features,
-            "LOW_LEVEL" : low_level_features,
-            "COMBO" : high_level_features + low_level_features}
 
 def mlp(x, weights, biases, n_layers, p_dropout=1.0):
     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
@@ -245,8 +242,8 @@ def train_model(params, chkpt_file_name):
             test_accuracy = accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0})
             
             train_auc = sess.run(tr_auc, feed_dict={x : train_inputs, y:train_labels, p_dropout:.5})
-            test_auc = sess.run(tst_auc, feed_dict={x : test_inputs, y:test_labels, p_dropout:1.0}
-)
+            test_auc = sess.run(tst_auc, feed_dict={x : test_inputs, y:test_labels, p_dropout:1.0})
+
             train_set_cost.append(avg_cost)
             test_set_cost.append(test_cost)
             train_set_accuracy.append(train_accuracy)
@@ -269,11 +266,19 @@ def train_model(params, chkpt_file_name):
 
         print('Optimization Finished! : model saved at %s' % model_save_path)
 
-
-params = dict(learning_rate=np.array([.0001]), 
+hypers = dict(learning_rate=np.array([.0001]), 
                     n_hidden_layers=np.array([1]), 
                     units_per_layer=np.array([50]),
-                    beta=np.array([1]),
-                    features=high_level_features + low_level_features)
+                    beta=np.array([1]))
+            
+high_level_params = hypers.copy()
+low_level_params = hypers.copy()
+all_params = hypers.copy()
 
-train_model(params, 'test.ckpt')
+high_level_params.update(dict(features=high_level_features))
+low_level_params.update(dict(features=low_level_features))
+all_params.update(dict(features=high_level_features + low_level_features))
+
+train_model(high_level_params, 'high_level.ckpt')
+train_model(low_level_params, 'low_level.ckpt')
+train_model(all_params, 'all_level.ckpt')
