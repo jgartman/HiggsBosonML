@@ -114,7 +114,7 @@ def main(job_id,params):
     beta = int( params['beta'])
    
  
-    training_epochs = 1000
+    training_epochs = 2000
     batch_size = 100
     display_step = 1
 
@@ -174,5 +174,5 @@ def main(job_id,params):
 
     return float(test_cost)
 
-params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([100]))
-main(0,params)
+#params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([100]))
+#main(0,params)
