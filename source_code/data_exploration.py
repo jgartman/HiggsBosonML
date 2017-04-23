@@ -41,29 +41,47 @@ low_level_features = [
 plt.hist(s[s["DER_mass_MMC"] != -999]["DER_mass_MMC"],bins=50,histtype="step",range=(0,500),color="blue",normed=True)
 plt.hist(b[b["DER_mass_MMC"] != -999]["DER_mass_MMC"],bins=50,histtype="step",range=(0,500),color="green",normed=True)
 
+plt.title('Estimated mass of Higgs boson candidate')
+plt.xlabel('GeV')
+plt.savefig('../plots/DER_mass_MMC.png')
 plt.show()
 
 plt.hist(s["DER_mass_transverse_met_lep"], bins=50,range=(0,300),histtype="step",color="blue",normed=True)
 plt.hist(b["DER_mass_transverse_met_lep"], bins=50,range=(0,300),histtype="step",color="green",normed=True)
 
+plt.title('Transverse mass')
+plt.xlabel('GeV')
+plt.savefig('../plots/DER_mass_transverse_met_lep.png')
 plt.show()
 
 plt.hist(s["DER_sum_pt"], bins=50,range=(0,500),histtype="step",color="blue",normed=True)
 plt.hist(b["DER_sum_pt"], bins=50,range=(0,500),histtype="step",color="green",normed=True)
 
+plt.title('Sum of modulii of transverse momenta')
+plt.xlabel('GeV')
+plt.savefig('../plots/DER_sum_pt.png')
 plt.show()
 
 plt.hist(s["PRI_tau_pt"], bins=50,range=(0,500),histtype="step",color="blue",normed=True)
 plt.hist(b["PRI_tau_pt"], bins=50,range=(0,500),histtype="step",color="green",normed=True)
 
+plt.title('Transverse momenta of the tau')
+plt.xlabel('GeV')
+plt.savefig('../plots/PRI_tau_pt.png')
 plt.show()
 
 plt.hist(s["PRI_lep_pt"], bins=50,range=(0,500),histtype="step",color="blue",normed=True)
 plt.hist(b["PRI_lep_pt"], bins=50,range=(0,500),histtype="step",color="green",normed=True)
 
+plt.title('Transverse momenta of the lepton (electron or muon)')
+plt.xlabel('GeV')
+plt.savefig('../plots/PRI_lep_pt.png')
 plt.show()
 
 plt.hist(s["PRI_met"], bins=50,range=(0,200),histtype="step",color="blue",normed=True)
 plt.hist(b["PRI_met"], bins=50,range=(0,200),histtype="step",color="green",normed=True)
 
+plt.title('Missing transverse energy')
+plt.xlabel('GeV')
+plt.savefig('../plots/PRI_met.png')
 plt.show()
