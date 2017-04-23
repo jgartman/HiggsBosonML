@@ -134,7 +134,7 @@ def test_model(params,features,chkpt_file=None):
 #params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
 #test_model(params, high_level_features + low_level_features)
 
-def train_model(params, features, chkpt_file_name):
+def train_model(params, chkpt_file_name):
     print params
     data_path = "../higgs_data/atlas-higgs-challenge-2014-v2.csv"
 
@@ -147,7 +147,7 @@ def train_model(params, features, chkpt_file_name):
     training_set_size = 100000
 
     del data
-
+    features = params['features']
     train_inputs = training_data[features]
     test_inputs = testing_data[features]
 
@@ -186,7 +186,9 @@ def train_model(params, features, chkpt_file_name):
     pred = mlp(x,weights,biases,n_hidden_layers,p_dropout=p_dropout)
     probs = tf.nn.softmax(pred)
     
-    auc = tf.metrics.auc(y,probs)
+    tr_auc = tf.metrics.auc(y,probs)
+    tst_auc = tf.metrics.auc(y,probs)
+
     # Define loss and optimizer
     regularizer = get_regularizer(weights)
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y) + beta * regularizer)
@@ -201,10 +203,14 @@ def train_model(params, features, chkpt_file_name):
     with tf.Session() as sess:
         sess.run(init)
         sess.run(tf.initialize_local_variables())
+
         train_set_cost = []
         test_set_cost = []
         train_set_accuracy = []
         test_set_accuracy = []
+        test_set_auc = []
+        train_set_auc = []
+
         # Training cycle
         for epoch in range(training_epochs):
             avg_cost = 0.
@@ -238,14 +244,16 @@ def train_model(params, features, chkpt_file_name):
             train_accuracy = accuracy.eval({x: train_inputs, y: train_labels,p_dropout:.5})
             test_accuracy = accuracy.eval({x: test_inputs, y: test_labels,p_dropout:1.0})
             
-            _auc = sess.run(auc, feed_dict={x : test_inputs, y:test_labels, p_dropout:1.0})
-            print _auc
-
+            train_auc = sess.run(tr_auc, feed_dict={x : train_inputs, y:train_labels, p_dropout:.5})
+            test_auc = sess.run(tst_auc, feed_dict={x : test_inputs, y:test_labels, p_dropout:1.0}
+)
             train_set_cost.append(avg_cost)
             test_set_cost.append(test_cost)
             train_set_accuracy.append(train_accuracy)
             test_set_accuracy.append(test_accuracy)
-
+            train_set_auc.append(train_auc)
+            test_set_auc.append(test_auc)
+    
             print("Training Set Accuracy for epoch " + str(epoch + 1) +  " :", train_accuracy)
             print("Test Set Accuracy for epoch " + str(epoch + 1) +  " :", test_accuracy)
          
@@ -255,10 +263,17 @@ def train_model(params, features, chkpt_file_name):
         pickle.dump(train_set_accuracy, open(data_save_path + '/train_accuracy.p','wb'))
         pickle.dump(test_set_accuracy, open(data_save_path + '/test_accuracy.p','wb'))
         pickle.dump(train_set_cost, open(data_save_path + '/train_cost.p','wb'))
-        pickle.dump(test_cost, open(data_save_path + '/test_cost.p','wb'))
+        pickle.dump(test_set_cost, open(data_save_path + '/test_cost.p','wb'))
+        pickle.dump(train_set_auc, open(data_save_path + '/train_auc.p','wb'))
+        pickle.dump(test_set_auc, open(data_save_path + '/test_auc.p','wb'))
 
         print('Optimization Finished! : model saved at %s' % model_save_path)
 
 
-params = dict(learning_rate=np.array([.0001]), n_hidden_layers=np.array([1]), units_per_layer=np.array([50]),beta=np.array([1]))
-train_model(params, high_level_features + low_level_features, 'test.ckpt')
+params = dict(learning_rate=np.array([.0001]), 
+                    n_hidden_layers=np.array([1]), 
+                    units_per_layer=np.array([50]),
+                    beta=np.array([1]),
+                    features=high_level_features + low_level_features)
+
+train_model(params, 'test.ckpt')
