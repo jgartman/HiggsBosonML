@@ -138,8 +138,8 @@ def train_model(params, chkpt_file_name):
     data = pd.read_csv(data_path)
     data['DER_mass_MMC'] = data['DER_mass_MMC'].replace(-999,data['DER_mass_MMC'].median())
     
-    training_data = data[120000:220000]
-    training_data.index = range(100000)
+    training_data = data[120000:720000]
+    training_data.index = range(600000)
     testing_data = data[720000:]
     training_set_size = 100000
 
@@ -163,7 +163,7 @@ def train_model(params, chkpt_file_name):
     data_save_path = './output/' + now
     os.mkdir(data_save_path)
 
-    training_epochs = 10
+    training_epochs = 2000
     batch_size = 100
     display_step = 1
 
@@ -267,9 +267,9 @@ def train_model(params, chkpt_file_name):
         print('Optimization Finished! : model saved at %s' % model_save_path)
 
 hypers = dict(learning_rate=np.array([.0001]), 
-                    n_hidden_layers=np.array([1]), 
-                    units_per_layer=np.array([50]),
-                    beta=np.array([1]))
+                    n_hidden_layers=np.array([2]), 
+                    units_per_layer=np.array([150]),
+                    beta=np.array([.1]))
             
 high_level_params = hypers.copy()
 low_level_params = hypers.copy()
