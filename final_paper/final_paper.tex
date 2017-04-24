@@ -7,6 +7,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{subfig}
+\usepackage{appendix}
 
 % Include other packages here, before hyperref.
 
@@ -125,18 +126,21 @@ In addition to dropout, another method of preventing overfitting in neural netwo
 $E(w) = E_0(w) + \frac{1}{2} \lambda \sum_i w_i$
 \\
 \\
-In \cite{Krogh92asimple} the authors show that an L2 weight decay is able to improve the generalization performance of a neural network with multiple hidden.  Adding weight decay to a model helps it choose the simplest representation available that is capable of accurately describing the data thus limiting the potential for overfitting.  It is noted in \cite{Srivastava:2014:DSW:2627435.2670313} that a combination of weight decay and dropout can lead to better performance than either method used in isolation since using weight decay allows the learning rate to be dramatically increased without the worry of the weights blowing up.  The noise provided by dropout then allows the optimization to explore different regions of the weight space that otherwise would have been difficult to reach.
+In \cite{Krogh92asimple} the authors show that an L2 weight decay is able to improve the generalization performance of a neural network with multiple hidden.  Adding weight decay to a model helps it choose the simplest representation available that is capable of accurately describing the data thus limiting the potential for overfitting.  It is noted in \cite{Srivastava:2014:DSW:2627435.2670313} that limiting the magnitude of the weights while using dropout can lead to even better performance than just using dropout.  They speculate that this is because the learning rate can be dramatically increased without the worry of the weights blowing up.  The noise provided by dropout then allows the optimization to explore different regions of the weight space that otherwise would have been difficult to reach.
 
 \subsection{Activation Functions}
-Traditionally neural networks were training with sigmoid or tangent hyperbolic activation functions of the hidden units.  A drawback of training networks with these activation functions is that gradients computed during backpropagation can quickly vanish making it difficult to update the weights in the networks initial layers.  Eventually it was observed that better results could be achieved by unsupervised pre-training of the network \cite{Vincent:2010:SDA:1756006.1953039}. Further investigation has revealed that the unsupervised pre-training can be replaced by a change of activation function \cite{AISTATS2011_GlorotBB11}.  A rectified linear unit or ReLU is an activation function described as:
+Traditionally neural networks were trained with sigmoid or tanh activation functions for the hidden units.  A drawback of training networks with these activations is that gradients computed during backpropagation can quickly vanish making it difficult to update the weights in the networks initial layers.  Studies of biological neurons noted that they were typically either off or behaved in a linear manner which led to the development of rectified linear units  \cite{AISTATS2011_GlorotBB11}. A rectified linear unit or ReLU is an activation function with the following form:
 
 $f(x) = max(0,x)$
+\\
+\\
+ReLU's help a network obtain a sparse representation which has several mathematical advantages. Sparse models are more likely to be linearly separable and may better disentangle the factors explaining variations in the data.
 
-One important advantage of ReLU when compared with sigmoid activations is that ReLU encourages sparsity in the model.  As mentioned in \cite{AISTATS2011_GlorotBB11} sparse models are more likely to be linearly separable and may better disentangle the factors explaining variations in the data.
+Earlier work in deep learning revealed that unsupervised pre-training of a network was able to significantly improve performance \cite{Vincent:2010:SDA:1756006.1953039}.  In \cite{AISTATS2011_GlorotBB11} it is shown that networks with ReLU activations achieve nearly the same or better results as networks with sigmoid activations that have undergone unsupervised pre-training.  This insight leads to well behaved deep networks without the need to spend valuable computational resources on unsupervised pre-training.
 
 \section{Experiments and Results}
 
-Experiments were conducted on a dataset released by CERN, the organization that runs the LHC.  The dataset consists of 818,238 simulated collision events.  The events are labeled as either "signal" meaning the collision produced a $H \rightarrow \tau^+ \tau^-$ decay or "background" meaning no such decay occurred.  There are a mix of high and low level features.  The low level features simulate the raw output from detectors at the LHC and the high level features are quantities derived from the low level features.  Figure \ref{fig:features_dist} shows the distributions of some high and low level features from the dataset.  In general it appears that the high level features have greater discriminating power between the two classes than the low level feaures.  A complete description of the meaning of these features is available in \cite{pmlr-v42-cowa14}.  The dataset contains very similar features to that used in \cite{Baldi:2014pta} but is about 1\% the size.
+Experiments were conducted on a dataset released by CERN, the organization that runs the LHC.  The dataset consists of 818,238 simulated collision events.  The events are labeled as either "signal" meaning the collision produced a $H \rightarrow \tau^+ \tau^-$ decay or "background" meaning no such decay occurred.  There are a mix of high and low level features.  The low level features simulate the raw output from detectors at the LHC and the high level features are quantities derived from the low level features through kinematic or other physical relations.  Figure \ref{fig:features_dist} shows the distributions of some high and low level features from the dataset.  In general it appears that the high level features have greater discriminating power between the two classes than their low level counterparts.  A complete description of the meaning of these features is available in \cite{pmlr-v42-cowa14}.  The dataset contains very similar input features and the same output class labels to that used in \cite{Baldi:2014pta} but is about 1\% the size.  The input features were standardized to have mean 0 and a standard deviation of 1 and network weights were initialized by a uniform distribution between -1 and 1.  Because of the choice of ReLU activations this means that approximately half the neurons in the network were initially zero.
 
 \begin{figure}
 \begin{center}
@@ -150,13 +154,13 @@ Experiments were conducted on a dataset released by CERN, the organization that 
 \subfloat[]{\includegraphics[width = 1.5in]{../plots/PRI_tau_pt.png}}
 \\
 \end{tabular}
-\caption{Distributions of high level (top row) and low level(bottom row) features.  Signal events are blue and background events are green.}
+\caption{Distributions of high level (top row) and low level(bottom row) features for signal (blue) and background (green) events. }
 \label{fig:features_dist}
 \end{center}
 \end{figure}
 
 
-Bayesian hyper-parameter optimization was conducted to minimized the cross entropy error of a neural network.  The hyper-parameters selected for optimization were the initial learning rate of the Adam optimizer, the number of hidden layers in the network, the number of hidden units per layer, and the weight decay constant.  Figure \ref{fig:hypers} give the minimum and maximum ranges of these hyper-parameters as well as the optimal values.  Optimization was implemented with the Spearmint software package.  A validation training set of 100,000 examples was used to train a model with the full feature set and then the cross entropy error was evaluated on a validation test set of 20,000 examples.  The optimization was allowed to proceed for 20 iterations of selecting new parameters and then evaluating the model.  Hyper-parameters that were used without optimization were the mini-batch size of 100, the dropout probability of 0.50 and the choice of ReLU activations.  Once hyper-parameters were optimized they were used to train the network with a training set size of 600,000 examples and then were evaluated on a test set of size 98,238.
+Bayesian hyper-parameter optimization was conducted to minimized the cross entropy error of a neural network.  The hyper-parameters selected for optimization were the initial learning rate of the Adam optimizer, the number of hidden layers in the network, the number of hidden units per layer, and the weight decay constant.  Figure \ref{fig:hypers} give the explored ranges of these hyper-parameters as well as the optimal values.  The parameter are similar to those used in \cite{Baldi:2014pta}. Optimization was implemented with the Spearmint software package.  A validation training set of 100,000 examples was used to train a model with the full feature set and then the cross entropy error was evaluated on a validation test set of 20,000 examples.  The optimization was allowed to proceed for 20 iterations of parameter selection and evaluation.  Ideally separate hyper-parameter optimizations would have been performed for the high-level, low-level and combinations of the low and high level features but due to computational limitations this was not possible. Hyper-parameters that were used without optimization were the mini-batch size of 100, the dropout probability of 0.50 and the choice of ReLU activations.  As shown in figure \ref{fig:hypers} a relatively small network was chosen with only two hidden layers and 150 units per hidden layer.  This is in stark contrast to \cite{Baldi:2014pta} where a similar Bayesian optimization was performed and the but the chosen network had 8 hidden layers with 500 hidden units per layer.  Once hyper-parameters were optimized they were used to train the network with a training set size of 600,000 examples and then the model was evaluated on a test set of size 98,238.
 
 \begin{figure}
 \begin{center}
@@ -165,9 +169,9 @@ Bayesian hyper-parameter optimization was conducted to minimized the cross entro
  \hline
  Hyper-parameter & Minimum & Maximum & Optimal\\ [0.5ex] 
  \hline\hline
- Initial learning rate & 0.0001 & 1.0 & 1.0 \\[1ex] 
+ Initial learning rate & 0.0001 & 1.0 & 0.0001 \\[1ex] 
  \hline
- Number of hidden units per layer & 50 & 500 & 50 \\[1ex]
+ Number of hidden units per layer & 50 & 500 & 150 \\[1ex]
  \hline
  Number of hidden layers & 1 & 8 & 2 \\[1ex]
  \hline
@@ -185,5 +189,6 @@ Bayesian hyper-parameter optimization was conducted to minimized the cross entro
 \bibliographystyle{ieee}
 \bibliography{egbib}
 }
+
 
 \end{document}
