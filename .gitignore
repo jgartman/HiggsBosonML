@@ -3,10 +3,15 @@ flavours-of-physics-start
 higgs_data/
 papers/
 proposal/
+*.db
 *.pyc
 *.aux
 *.bbl
 *.blg
 *.log
 *.gz
+*.tex
+*.sty
+*.bib
+*.bst
 
